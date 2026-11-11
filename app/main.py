@@ -142,6 +142,12 @@ def create_booking(payload: BookingCreate, idempotency_key: str = Header(min_len
     claimed = db.execute(update(Slot).where(Slot.id == payload.slot_id, Slot.is_booked.is_(False), Slot.starts_at > datetime.now(timezone.utc)).values(is_booked=True))
     if claimed.rowcount != 1:
         db.rollback()
+        # If another identical request just committed, treat this as a successful retry.
+        previous = db.scalar(select(IdempotencyRecord).where(IdempotencyRecord.patient_id == payload.patient_id, IdempotencyRecord.key == idempotency_key))
+        if previous and previous.request_hash == body_hash:
+            existing = db.get(Booking, previous.booking_id)
+            if existing:
+                return booking_json(existing)
         if not db.get(Slot, payload.slot_id):
             raise HTTPException(404, "Appointment slot not found.")
         raise HTTPException(409, "This slot is no longer available.")
