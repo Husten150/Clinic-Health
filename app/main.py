@@ -14,7 +14,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Res
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, create_engine, select, update
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint, create_engine, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
@@ -52,7 +52,7 @@ class IdempotencyRecord(Base):
     key: Mapped[str] = mapped_column(String(128), nullable=False)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     booking_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    __table_args__ = ()
+    __table_args__ = (UniqueConstraint("patient_id", "key", name="uq_idempotency_patient_key"),)
 
 Base.metadata.create_all(engine)
 
@@ -153,6 +153,12 @@ def create_booking(payload: BookingCreate, idempotency_key: str = Header(min_len
         db.commit()
     except IntegrityError:
         db.rollback()
+        # A simultaneous retry may have won the unique idempotency-key race.
+        previous = db.scalar(select(IdempotencyRecord).where(IdempotencyRecord.patient_id == payload.patient_id, IdempotencyRecord.key == idempotency_key))
+        if previous and previous.request_hash == body_hash:
+            existing = db.get(Booking, previous.booking_id)
+            if existing:
+                return booking_json(existing)
         raise HTTPException(409, "Could not complete booking; retry with the same idempotency key.")
     db.refresh(booking)
     return booking_json(booking)
