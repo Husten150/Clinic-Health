@@ -4,6 +4,9 @@ A small clinic appointment booking API and responsive browser UI, built with Fas
 
 ## Features
 
+- Patient signup and sign-in with date of birth, unique email and scrypt password hashing.
+- Patient-only bearer sessions with 12-hour expiry and a dedicated signing secret.
+- Patient-facing slot browsing, appointment booking with a reason for visit, and private booking history.
 - List available appointment slots, optionally filtered by UTC date.
 - Book a slot and retrieve a booking confirmation.
 - API-key authentication using `X-API-Key`; constant-time key comparison.
@@ -35,6 +38,18 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/admin/slots/seed?
 ```
 
 API documentation: http://127.0.0.1:8000/docs
+
+## Patient account API
+
+- `POST /api/auth/signup` — create an account with full name, date of birth, email and password (minimum 10 characters).
+- `POST /api/auth/signin` — sign in and receive a 12-hour bearer token.
+- `GET /api/auth/me` — get the signed-in patient profile.
+- `GET /api/patient/slots?day=YYYY-MM-DD` — list available slots.
+- `POST /api/patient/bookings` — book a slot with bearer authentication and an `Idempotency-Key`; body contains `slot_id` and `reason`.
+- `GET /api/patient/bookings` — list only the signed-in patient's bookings.
+- `GET /api/patient/bookings/{booking_id}` — retrieve only the signed-in patient's own booking.
+
+The patient-facing page does not need the administrator API key. Set `AUTH_TOKEN_SECRET` as a separate secret in Render; the Blueprint requests a generated value. Never commit either secret to GitHub.
 
 ## API
 
