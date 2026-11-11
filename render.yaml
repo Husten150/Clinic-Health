@@ -21,5 +21,7 @@ services:
         value: production
       - key: API_KEY
         generateValue: true
+      - key: AUTH_TOKEN_SECRET
+        generateValue: true
       - key: RATE_LIMIT_PER_MINUTE
         value: "60"
