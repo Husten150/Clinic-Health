@@ -7,6 +7,7 @@ A small clinic appointment booking API and responsive browser UI, built with Fas
 - Patient signup and sign-in with date of birth, unique email and scrypt password hashing.
 - Patient-only bearer sessions with 12-hour expiry and a dedicated signing secret.
 - Patient-facing slot browsing, appointment booking with a reason for visit, and private booking history.
+- Automatically creates a rolling 30-day supply of weekday demo appointment slots at startup, so the patient dashboard has bookable times without manual seeding.
 - List available appointment slots, optionally filtered by UTC date.
 - Book a slot and retrieve a booking confirmation.
 - API-key authentication using `X-API-Key`; constant-time key comparison.
@@ -91,6 +92,6 @@ Tests use a local SQLite database and cover authentication, validation, booking,
 2. In Render, choose **New → Blueprint** and select this repository.
 3. Render reads `render.yaml`, provisions PostgreSQL and generates `API_KEY`.
 4. After deploy, open the service URL and use the generated API key in the web page.
-5. Seed demo appointment times by calling `POST /api/admin/slots/seed?days=14` with the generated `X-API-Key` header.
+5. The app automatically creates future weekday demo slots on startup. Administrators can also manually add demo slots with `POST /api/admin/slots/seed?days=14` and the generated `X-API-Key` header.
 
 The included limiter is process-local. For multi-instance production deployments, use a shared Redis limiter. The demo seed route should be restricted/removed before handling real patient traffic. This sample is not a certified clinical system: add staff authorization, audit logging, privacy controls, backups, monitoring, and applicable healthcare compliance safeguards before production use. All appointment timestamps are UTC in this demo.
