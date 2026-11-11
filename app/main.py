@@ -73,6 +73,26 @@ if "reason" not in {column["name"] for column in inspect(engine).get_columns("bo
         connection.execute(text("ALTER TABLE bookings ADD COLUMN reason VARCHAR(1000) NOT NULL DEFAULT ''"))
 
 app = FastAPI(title="Clinic Health Booking API", version="1.0.0", description="Clinic appointment booking API with concurrency safety and idempotency.")
+
+@app.on_event("startup")
+def ensure_demo_slots_exist():
+    """Keep a rolling 30-day supply of weekday demo slots for patient self-booking."""
+    with SessionLocal() as db:
+        now = datetime.now(timezone.utc)
+        today = now.date()
+        for day_offset in range(30):
+            target = today + timedelta(days=day_offset)
+            if target.weekday() >= 5:
+                continue
+            for hour in range(9, 17):
+                starts = datetime.combine(target, dtime(hour, 0), tzinfo=timezone.utc)
+                if starts <= now:
+                    continue
+                exists = db.scalar(select(Slot.id).where(Slot.starts_at == starts))
+                if not exists:
+                    db.add(Slot(starts_at=starts, duration_minutes=30))
+        db.commit()
+
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 # Small in-process limiter. For multiple replicas, replace with a shared Redis-backed limiter.
