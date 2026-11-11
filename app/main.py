@@ -123,6 +123,7 @@ class BookingCreate(BaseModel):
     patient_id: str = Field(min_length=2, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
     patient_name: str = Field(min_length=2, max_length=120)
     patient_email: EmailStr
+    reason: str = Field(default="", max_length=1000)
 
 def slot_json(slot: Slot):
     return {"id": slot.id, "starts_at": slot.starts_at.isoformat(), "duration_minutes": slot.duration_minutes, "available": not slot.is_booked}
