@@ -8,7 +8,7 @@ const firebaseConfig = {
   projectId: "clinic-health-e8414",
   storageBucket: "clinic-health-e8414.firebasestorage.app",
   messagingSenderId: "698550863941",
-  appId: "1:1a6f60b2c34e263abbfb2c",
+  appId: "1:698550863941:web:1a6f60b2c34e263abbfb2c",
   measurementId: "G-SR61FRBQ68"
 };
 
