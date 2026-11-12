@@ -19,16 +19,17 @@ A small clinic appointment booking API and responsive browser UI, built with Fas
 - Per-IP request throttling (60 requests/minute by default).
 - Health endpoint, OpenAPI docs and Render deployment blueprint.
 
-## Google authentication setup
+## Firebase Google authentication setup
 
-Google signup and sign-in use Google Identity Services in the browser and server-side ID-token verification with `google-auth`.
+Google signup and sign-in use the Firebase JavaScript SDK in the browser and Firebase Admin token verification in the FastAPI backend.
 
-1. Create an OAuth 2.0 **Web application** client in the Google Cloud Console.
-2. Add your deployed Render origin (for example, `https://clinic-health-qgnh.onrender.com`) to **Authorized JavaScript origins**. Add `http://localhost:8000` for local development if needed.
-3. In Render, open the Clinic Health web service → Environment and set `GOOGLE_CLIENT_ID` to the Web client ID. Do not put a client secret or API key in frontend code.
-4. Redeploy the service after setting the variable.
+1. In the Firebase Console, open project `clinic-health-e8414`.
+2. Go to **Authentication → Sign-in method** and enable **Google**.
+3. Under **Authentication → Settings → Authorized domains**, add `clinic-health-qgnh.onrender.com` and any local development domain you use.
+4. In **Project settings → Service accounts**, generate a private key for the Firebase Admin SDK. Store the complete JSON contents as the Render environment variable `FIREBASE_SERVICE_ACCOUNT_JSON`. Never commit this file or expose its private key in frontend code.
+5. Set `FIREBASE_PROJECT_ID=clinic-health-e8414` in Render and redeploy.
 
-New Google users must provide their date of birth during signup. Existing accounts can sign in with Google when the verified Google email matches their account email. Google sign-in for an email with no existing account directs the patient to create an account first.
+The Firebase web configuration is public app configuration. The service-account JSON is private server credential material. New Google users must enter their date of birth on the signup page. Existing patient accounts can use Google when the Firebase account has a verified email matching the account email. Firebase ID tokens are verified by the backend before it creates the Clinic Health patient session.
 
 ## Web pages
 
