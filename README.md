@@ -19,6 +19,19 @@ A small clinic appointment booking API and responsive browser UI, built with Fas
 - Per-IP request throttling (60 requests/minute by default).
 - Health endpoint, OpenAPI docs and Render deployment blueprint.
 
+## Web pages
+
+The patient experience is a responsive multi-page website, not a single-page layout:
+
+- `/` — public welcome page
+- `/signup` — patient registration
+- `/signin` — patient sign-in
+- `/appointments` — authenticated slot browsing and appointment booking
+- `/bookings` — authenticated booking history
+- `/booking/{booking_id}` — authenticated booking details
+
+Shared responsive styling and page-specific JavaScript live in `frontend/styles.css` and `frontend/app.js`. The FastAPI app serves each page route and static assets under `/static`.
+
 ## Run locally
 
 Python 3.11+ is recommended.
