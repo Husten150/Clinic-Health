@@ -16,8 +16,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Res
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field
-from google.oauth2 import id_token as google_id_token
-from google.auth.transport import requests as google_requests
+import firebase_admin
+from firebase_admin import auth as firebase_auth, credentials as firebase_credentials
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, UniqueConstraint, create_engine, inspect, select, update, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -136,8 +136,8 @@ class PatientSignin(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
 
-class GoogleAuthPayload(BaseModel):
-    credential: str = Field(min_length=20, max_length=8192)
+class FirebaseAuthPayload(BaseModel):
+    id_token: str = Field(min_length=20, max_length=8192)
     date_of_birth: date | None = None
 
 class PatientBookingCreate(BaseModel):
@@ -396,34 +396,42 @@ def patient_signup(payload: PatientSignup, db: Session = Depends(get_db)):
     db.refresh(patient)
     return {"access_token": _issue_patient_token(patient.id), "token_type": "bearer", "patient": {"id": patient.id, "full_name": patient.full_name, "date_of_birth": patient.date_of_birth.isoformat(), "email": patient.email}}
 
-@app.get("/api/auth/google/config")
-def google_auth_config():
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    if not client_id:
-        return {"enabled": False}
-    return {"enabled": True, "client_id": client_id}
-
-@app.post("/api/auth/google", dependencies=[Depends(rate_limit)])
-def patient_google_auth(payload: GoogleAuthPayload, db: Session = Depends(get_db)):
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    if not client_id:
-        raise HTTPException(503, "Google sign-in is not configured. Set GOOGLE_CLIENT_ID in Render.")
+def _firebase_admin_app():
+    """Initialize Firebase Admin lazily from a Render-only service-account JSON secret."""
     try:
-        claims = google_id_token.verify_oauth2_token(payload.credential, google_requests.Request(), client_id)
+        return firebase_admin.get_app()
+    except ValueError:
+        raw_credentials = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+        project_id = os.getenv("FIREBASE_PROJECT_ID", "clinic-health-e8414")
+        if not raw_credentials:
+            raise HTTPException(503, "Firebase authentication is not configured. Set FIREBASE_SERVICE_ACCOUNT_JSON in Render.")
+        try:
+            service_account_info = json.loads(raw_credentials)
+            credential = firebase_credentials.Certificate(service_account_info)
+            return firebase_admin.initialize_app(credential, {"projectId": project_id})
+        except Exception:
+            raise HTTPException(503, "Firebase Admin credentials are invalid. Check FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID.")
+
+@app.post("/api/auth/firebase", dependencies=[Depends(rate_limit)])
+def patient_firebase_auth(payload: FirebaseAuthPayload, db: Session = Depends(get_db)):
+    try:
+        claims = firebase_auth.verify_id_token(payload.id_token, app=_firebase_admin_app(), check_revoked=True)
+    except HTTPException:
+        raise
     except Exception:
-        raise HTTPException(401, "Google credential is invalid or expired. Please try again.")
-    if not claims.get("email") or not claims.get("email_verified"):
-        raise HTTPException(401, "Google must provide a verified email address.")
-    email = str(claims["email"]).lower()
+        raise HTTPException(401, "Firebase sign-in token is invalid or expired. Please sign in again.")
+    email = str(claims.get("email") or "").lower()
+    if not email or not claims.get("email_verified"):
+        raise HTTPException(401, "Please use a Firebase account with a verified email address.")
     patient = db.scalar(select(PatientAccount).where(PatientAccount.email == email))
     if not patient:
         if not payload.date_of_birth:
-            raise HTTPException(409, "New Google users must complete signup with their date of birth.")
+            raise HTTPException(409, "Complete your date of birth on the signup page to create your patient account.")
         if payload.date_of_birth >= date.today():
             raise HTTPException(422, "Date of birth must be in the past.")
-        patient = PatientAccount(full_name=str(claims.get("name") or email.split("@")[0])[:120],
-            date_of_birth=payload.date_of_birth, email=email,
-            password_hash=_hash_password(secrets.token_urlsafe(48)))
+        display_name = str(claims.get("name") or email.split("@")[0])[:120]
+        patient = PatientAccount(full_name=display_name, date_of_birth=payload.date_of_birth,
+            email=email, password_hash=_hash_password(secrets.token_urlsafe(48)))
         db.add(patient)
         try:
             db.commit()
@@ -431,7 +439,7 @@ def patient_google_auth(payload: GoogleAuthPayload, db: Session = Depends(get_db
             db.rollback()
             patient = db.scalar(select(PatientAccount).where(PatientAccount.email == email))
             if not patient:
-                raise HTTPException(409, "Could not create your Google account. Please retry.")
+                raise HTTPException(409, "Could not create your Firebase patient account. Please retry.")
     return {"access_token": _issue_patient_token(patient.id), "token_type": "bearer",
             "patient": {"id": patient.id, "full_name": patient.full_name,
             "date_of_birth": patient.date_of_birth.isoformat(), "email": patient.email}}
