@@ -396,6 +396,13 @@ def patient_signup(payload: PatientSignup, db: Session = Depends(get_db)):
     db.refresh(patient)
     return {"access_token": _issue_patient_token(patient.id), "token_type": "bearer", "patient": {"id": patient.id, "full_name": patient.full_name, "date_of_birth": patient.date_of_birth.isoformat(), "email": patient.email}}
 
+@app.get("/api/auth/google/config")
+def google_auth_config():
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        return {"enabled": False}
+    return {"enabled": True, "client_id": client_id}
+
 @app.post("/api/auth/google", dependencies=[Depends(rate_limit)])
 def patient_google_auth(payload: GoogleAuthPayload, db: Session = Depends(get_db)):
     client_id = os.getenv("GOOGLE_CLIENT_ID")
