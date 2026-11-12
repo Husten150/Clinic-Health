@@ -23,5 +23,7 @@ services:
         generateValue: true
       - key: AUTH_TOKEN_SECRET
         generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
       - key: RATE_LIMIT_PER_MINUTE
         value: "60"
