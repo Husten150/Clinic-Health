@@ -23,7 +23,9 @@ services:
         generateValue: true
       - key: AUTH_TOKEN_SECRET
         generateValue: true
-      - key: GOOGLE_CLIENT_ID
+      - key: FIREBASE_PROJECT_ID
+        value: clinic-health-e8414
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: RATE_LIMIT_PER_MINUTE
         value: "60"
