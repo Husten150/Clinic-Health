@@ -165,6 +165,26 @@ def health():
 def home():
     return FileResponse("frontend/index.html")
 
+@app.get("/signup", include_in_schema=False)
+def signup_page():
+    return FileResponse("frontend/signup.html")
+
+@app.get("/signin", include_in_schema=False)
+def signin_page():
+    return FileResponse("frontend/signin.html")
+
+@app.get("/appointments", include_in_schema=False)
+def appointments_page():
+    return FileResponse("frontend/appointments.html")
+
+@app.get("/bookings", include_in_schema=False)
+def bookings_page():
+    return FileResponse("frontend/bookings.html")
+
+@app.get("/booking/{booking_id}", include_in_schema=False)
+def booking_detail_page(booking_id: str):
+    return FileResponse("frontend/booking.html")
+
 @app.get("/api/slots", dependencies=[Depends(require_api_key), Depends(rate_limit)])
 def list_slots(day: date | None = Query(default=None), available_only: bool = True, db: Session = Depends(get_db)):
     stmt = select(Slot).where(Slot.starts_at >= datetime.now(timezone.utc))
