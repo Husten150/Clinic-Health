@@ -19,6 +19,17 @@ A small clinic appointment booking API and responsive browser UI, built with Fas
 - Per-IP request throttling (60 requests/minute by default).
 - Health endpoint, OpenAPI docs and Render deployment blueprint.
 
+## Google authentication setup
+
+Google signup and sign-in use Google Identity Services in the browser and server-side ID-token verification with `google-auth`.
+
+1. Create an OAuth 2.0 **Web application** client in the Google Cloud Console.
+2. Add your deployed Render origin (for example, `https://clinic-health-qgnh.onrender.com`) to **Authorized JavaScript origins**. Add `http://localhost:8000` for local development if needed.
+3. In Render, open the Clinic Health web service → Environment and set `GOOGLE_CLIENT_ID` to the Web client ID. Do not put a client secret or API key in frontend code.
+4. Redeploy the service after setting the variable.
+
+New Google users must provide their date of birth during signup. Existing accounts can sign in with Google when the verified Google email matches their account email. Google sign-in for an email with no existing account directs the patient to create an account first.
+
 ## Web pages
 
 The patient experience is a responsive multi-page website, not a single-page layout:
